@@ -1,4 +1,4 @@
-# STM32 f3 Discovery LSM303AGR Async
+# STM32 F3 Discovery LSM303AGR Async
 
 Running LSM303AGR magnetometer, temperature and accelerometer asynchronously with Embassy framework.
 

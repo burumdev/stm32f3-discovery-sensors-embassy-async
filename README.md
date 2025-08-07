@@ -1,4 +1,4 @@
-# STM32 F3 Discovery LSM303AGR Async
+# STM32 F3 Discovery Async Sensors
 
 Running LSM303AGR MEMS magnetometer-accelerometer and I3G4250D MEMS gyroscope (both from STMicroelectronics) asynchronously with Embassy async embedded framework.
 

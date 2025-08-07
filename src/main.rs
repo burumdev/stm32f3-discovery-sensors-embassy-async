@@ -46,11 +46,10 @@ async fn read_temperature(lsm303agr: &'static MagnetoMutex) {
             );
         }
         Err(err) => {
-            let err_txt = match err {
-                Lsm303agrError::Comm(_) => "I2C communication error.",
-                Lsm303agrError::InvalidInputData => "Invalid input data.",
-            };
-            error!("ERROR reading temperature: {}", err_txt);
+            error!(
+                "ERROR reading temperature: {}",
+                get_lsm303agr_error_text(&err)
+            );
         }
     }
 }

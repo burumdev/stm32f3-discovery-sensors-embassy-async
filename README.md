@@ -11,11 +11,14 @@ Devices can be found on the stm32 f3 discovery development board already hardwir
 We utilize I2C bus for communication with the magnetometer and SPI bus for gyroscope.
 
 We then read the sensor values of temperature in degrees celcius,
-EMT or earth's magnetic field in nanopascals and 3 axis acceleration in milli Gs. Tasks should read these values concurrently, in varied intervals like once 3 seconds, once 2048 ms and once 777 ms.
+EMT or earth's magnetic field in nanopascals and 3 axis acceleration in milli Gs asynchronously.
+Gyroscope values are read synchronously (they block everything) but timing of them is async.
+Tasks should read these values concurrently, in varied intervals like once 3 seconds, once 2048 ms and once 777 ms.
 
 My original aim was to run both LSM303AGR and I3G4250D on the same shared I2C bus by
-using synchronization primitives for both busses and drivers across async tasks
-but the I3G4250D driver though works perfectly, doesn't support I2C bus at this time.
+using synchronization primitives for both busses and drivers across async tasks.
+But the I3G4250D driver though works perfectly fine, doesn't support I2C bus at this time.
+See [shared_bus](https://github.com/embassy-rs/embassy/blob/main/examples/rp/src/bin/shared_bus.rs) example of Embassy framework.
 
 In the future I might add an I2C device like DS3231 Real Time Clock to this demo to achieve shared bus functionality.
 

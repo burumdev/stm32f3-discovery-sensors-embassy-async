@@ -4,20 +4,26 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Low level MCU libraries for linking against. Not used directly.
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.5"
+
+# For logging
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
-
-embedded-hal = "1.0.0"
-embedded-hal-bus = { version = "0.3.0", features = ["async"] }
-
-lsm303agr = { version = "1.1.0", features = ["async"] }
+# For logging panics
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 
+# Drivers
+lsm303agr = { version = "1.1.0", features = ["async"] }
+i3g4250d = "0.3.0"
+
+# Embassy
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-stm32 = { version = "0.2.0", features = ["stm32f303vc", "memory-x", "time-driver-tim2"] }
 embassy-sync = "0.7.0"
 embassy-time = { version = "0.4.0", features = ["defmt-timestamp-uptime"] }
+
+# For lazy compile time initialization of globals
 static_cell = "2.1.1"
 

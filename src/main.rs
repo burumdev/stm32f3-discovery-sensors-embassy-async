@@ -4,22 +4,29 @@
 use embassy_executor::Spawner;
 use embassy_stm32::{
     bind_interrupts,
+    gpio::{Level, Output, Speed},
     i2c::{self, I2c},
-    mode::Async,
+    mode::{Async, Blocking},
     peripherals,
+    spi::{Config, Spi},
     time::Hertz,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex};
-use embassy_time::Timer;
 
-use lsm303agr::{Error as Lsm303agrError, Lsm303agr, interface::I2cInterface, mode::MagOneShot};
+use i3g4250d::I3G4250D;
+use lsm303agr::{Lsm303agr, interface::I2cInterface, mode::MagOneShot};
 
 use static_cell::StaticCell;
 
 use defmt::*;
 use defmt_rtt as _;
-
 use panic_probe as _;
+
+mod tasks_lsm303agr;
+use tasks_lsm303agr::*;
+
+mod tasks_i3g4250d;
+use tasks_i3g4250d::*;
 
 bind_interrupts!(struct Irqs {
     I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
@@ -27,112 +34,18 @@ bind_interrupts!(struct Irqs {
 });
 
 type Magnetometer = Lsm303agr<I2cInterface<I2c<'static, Async>>, MagOneShot>;
-type MagnetoMutex = mutex::Mutex<CriticalSectionRawMutex, Magnetometer>;
+pub type MagnetoMutex = mutex::Mutex<CriticalSectionRawMutex, Magnetometer>;
 
-fn get_lsm303agr_error_text<E>(err: &Lsm303agrError<E>) -> &'static str {
-    match err {
-        Lsm303agrError::Comm(_) => "I2C communication error.",
-        Lsm303agrError::InvalidInputData => "Invalid input data.",
-    }
-}
-
-async fn read_temperature(lsm303agr: &'static MagnetoMutex) {
-    match lsm303agr.lock().await.temperature().await {
-        Ok(temperature) => {
-            info!("Temperature read successful.");
-            info!(
-                "Current temperature is: {} °C",
-                temperature.degrees_celsius()
-            );
-        }
-        Err(err) => {
-            error!(
-                "ERROR reading temperature: {}",
-                get_lsm303agr_error_text(&err)
-            );
-        }
-    }
-}
-#[embassy_executor::task]
-async fn read_temperature_every_n_seconds(lsm303agr: &'static MagnetoMutex, n_seconds: u64) {
-    info!("\n*** TEMPERATURE THE FIRST TIME ***");
-    read_temperature(lsm303agr).await;
-
-    loop {
-        Timer::after_secs(n_seconds).await;
-        info!("\n*** TEMPERATURE EVERY {} SECONDS ***", n_seconds);
-        read_temperature(lsm303agr).await;
-    }
-}
-
-async fn read_magnetometer(lsm303agr: &'static MagnetoMutex) {
-    match lsm303agr.lock().await.magnetic_field().await {
-        Ok(mag) => {
-            info!("Magnetometer read successful.");
-            info!(
-                "Earth's magnetic field: x = {} nanoteslas, y = {} nanoteslas, z = {} nanoteslas",
-                mag.x_nt(),
-                mag.y_nt(),
-                mag.z_nt()
-            );
-        }
-        Err(err) => {
-            error!(
-                "ERROR reading magnetometer: {}",
-                get_lsm303agr_error_text(&err)
-            );
-        }
-    }
-}
-#[embassy_executor::task]
-async fn read_magnetometer_every_n_milliseconds(lsm303agr: &'static MagnetoMutex, n_millis: u64) {
-    info!("\n*** EMF THE FIRST TIME ***");
-    read_magnetometer(lsm303agr).await;
-
-    loop {
-        Timer::after_millis(n_millis).await;
-        info!("\n*** EMF EVERY {} MILLISECONDS ***", n_millis);
-        read_magnetometer(lsm303agr).await;
-    }
-}
-
-async fn read_accelerometer(lsm303agr: &'static MagnetoMutex) {
-    match lsm303agr.lock().await.acceleration().await {
-        Ok(accel) => {
-            info!("Acceleration read successful.");
-            info!(
-                "3D acceleration x = {} milli Gs, y = {} milli Gs, z = {} milli Gs",
-                accel.x_mg(),
-                accel.y_mg(),
-                accel.z_mg(),
-            );
-        }
-        Err(err) => {
-            error!(
-                "ERROR reading accelerometer: {}",
-                get_lsm303agr_error_text(&err)
-            );
-        }
-    }
-}
-#[embassy_executor::task]
-async fn read_accelerometer_every_n_milliseconds(lsm303agr: &'static MagnetoMutex, n_millis: u64) {
-    info!("\n*** ACCELERATION THE FIRST TIME ***");
-    read_accelerometer(lsm303agr).await;
-
-    loop {
-        Timer::after_millis(n_millis).await;
-        info!("\n*** ACCELERATION EVERY {} MILLISECONDS ***", n_millis);
-        read_accelerometer(lsm303agr).await;
-    }
-}
+type Gyro = I3G4250D<Spi<'static, Blocking>, Output<'static>>;
+pub type GyroMutex = mutex::Mutex<CriticalSectionRawMutex, Gyro>;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    info!("Does defmt work? Yes it does!");
+    info!("Does defmt work? Yes it does!\n");
 
     let peris = embassy_stm32::init(Default::default());
 
+    // Magnetometer - accelerometer setup
     let i2c = I2c::new(
         peris.I2C1,
         // These pins are hardwired to the onboard magnetometer LSM303AGR on the stm32f3 discovery
@@ -146,13 +59,13 @@ async fn main(spawner: Spawner) {
         Hertz(100_000),
         Default::default(),
     );
-
     static LSM303AGR_CELL: StaticCell<MagnetoMutex> = StaticCell::new();
     let lsm303agr = Lsm303agr::new_with_i2c(i2c);
     let lsm303agr = LSM303AGR_CELL.init(mutex::Mutex::new(lsm303agr));
 
+    // Spawning magnetometer tasks
     spawner
-        .spawn(read_temperature_every_n_seconds(lsm303agr, 3))
+        .spawn(read_mag_temperature_every_n_seconds(lsm303agr, 3))
         .unwrap();
 
     spawner
@@ -162,4 +75,29 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(read_accelerometer_every_n_milliseconds(lsm303agr, 777))
         .unwrap();
+
+    // Gyroscope setup
+    let mut spi_config = Config::default();
+    spi_config.frequency = Hertz(1_000_000);
+
+    let spi = Spi::new_blocking(peris.SPI1, peris.PA5, peris.PA7, peris.PA6, spi_config);
+
+    static I3G4250D_CELL: StaticCell<GyroMutex> = StaticCell::new();
+    let cs_pin = Output::new(peris.PE3, Level::High, Speed::Low);
+    let i3g4250d = I3G4250D::new(spi, cs_pin).ok();
+
+    // Spawning gyro tasks
+    if let Some(i3g4250d) = i3g4250d {
+        let i3g4250d = I3G4250D_CELL.init(mutex::Mutex::new(i3g4250d));
+        spawner
+            .spawn(read_gyro_temperature_every_n_seconds(i3g4250d, 5))
+            .unwrap();
+        spawner
+            .spawn(read_gyro_every_n_milliseconds(i3g4250d, 1433))
+            .unwrap();
+    } else {
+        warn!(
+            "Could not establish SPI connection to i3g4250 gyro. But hey we can go on without it donchuwory we don't do rocket science here.."
+        );
+    }
 }

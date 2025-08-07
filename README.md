@@ -1,27 +1,37 @@
 # STM32 F3 Discovery LSM303AGR Async
 
-Running LSM303AGR magnetometer, temperature and accelerometer asynchronously with Embassy framework.
+Running LSM303AGR MEMS magnetometer-accelerometer and I3G4250D MEMS gyroscope (both from STMicroelectronics) asynchronously with Embassy async embedded framework.
 
 ## Description
 
 Embassy is an async runtime and framework for various embedded systems.
-The aim of this demo is to share a single peripheral driver instance of LSM303AGR magnetometer-accelerometer device between async tasks.
+The aim of this demo is to share single peripheral driver instances of LSM303AGR and I3G44250D devices between async tasks.
 
-Device can be found on the stm32 f3 discovery development board and it's already hardwired to the MCU. We utilize i2c bus for communication with the device.
+Devices can be found on the stm32 f3 discovery development board already hardwired to the MCU.
+We utilize I2C bus for communication with the magnetometer and SPI bus for gyroscope.
 
 We then read the sensor values of temperature in degrees celcius,
 EMT or earth's magnetic field in nanopascals and 3 axis acceleration in milli Gs. Tasks should read these values concurrently, in varied intervals like once 3 seconds, once 2048 ms and once 777 ms.
 
+My original aim was to run both LSM303AGR and I3G4250D on the same shared I2C bus by
+using synchronization primitives for both busses and drivers across async tasks
+but the I3G4250D driver though works perfectly, doesn't support I2C bus at this time.
+
+In the future I might add an I2C device like DS3231 Real Time Clock to this demo to achieve shared bus functionality.
+
 ## Hardware
 
-Project is developed on STM32 F3 Discovery development board with Arm Cortex 4m core. Newest versions of this board has the LSM303AGR device.
-Earlier versions might have an LSM303DLHC also from ST Microelectronics, but it's a completely different beast and won't work with the driver or i2c settings used in this demo.
+Project is developed on STM32 F3 Discovery development board with Arm Cortex 4m core. Newest versions of this board has the LSM303AGR and I3G44250D devices.
+Earlier versions might have an LSM303DLHC as magneto and L3GD20 as gyro also from ST Microelectronics,
+but they're completely different beasts and probably won't work with the drivers or comm settings used in this demo.
 
 ## Libraries used
-* [embassy-rs](https://github.com/embassy-rs/embassy) provides the async runtime tuned for embedded hardware ecosystem and behaviour. It's also a framework, so in this
+* [embassy-rs](https://github.com/embassy-rs/embassy) provides the async runtime tuned for embedded hardware ecosystem and behaviour. It's also a framework and in this
 demo it also provides the PAC (low level peripheral access), HAL (high level hardware abstractions that humans can relate to) and timer support.
 
 * [lsm303agr-rs](https://github.com/eldruin/lsm303agr-rs) driver for the magnetometer and accelerometer which supports asynchronous operation.
+
+* [i3g4250d](https://docs.rs/i3g4250d/latest/i3g4250d/) driver for the gyroscope. Works synchronously. But SPI works in 1MHz so not a problem at all.
 
 * [probe-rs](https://github.com/probe-rs/probe-rs) awesome command-line tool for flashing firmware and debugging embedded devices.
 
@@ -44,6 +54,8 @@ Connect stm32f3-discovery via USB and:
 cargo run
 ```
 
-## Authors
+## License
+MIT
 
+## Authors
 Barış Ürüm

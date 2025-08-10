@@ -25,6 +25,7 @@ embassy-stm32 = { version = "0.2.0", features = ["stm32f303vc", "memory-x", "tim
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
 embassy-sync = "0.7.0"
 embassy-time = { version = "0.4.0", features = ["defmt-timestamp-uptime"] }
+embassy-embedded-hal = { version = "0.4.0", features = ["defmt"] }
 
 # For lazy compile time initialization of globals
 static_cell = "2.1.1"
@@ -32,6 +33,7 @@ static_cell = "2.1.1"
 # chrono
 chrono = { version = "0.4.41", default-features = false }
 ds323x = "0.6.0"
+embedded-hal-async = "1.0.0"
 
 # cargo build/run
 [profile.dev]

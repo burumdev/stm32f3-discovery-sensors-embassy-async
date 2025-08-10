@@ -12,14 +12,15 @@ use embassy_stm32::{
     spi::{Config as SpiConfig, Spi},
     time::Hertz,
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex};
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex, blocking_mutex::raw::NoopRawMutex, mutex::Mutex,
+};
 
 use ds323x::{
     DateTimeAccess, Ds323x, NaiveDate, SqWFreq, ic::DS3231,
     interface::I2cInterface as RtcI2cInterface,
 };
 use i3g4250d::I3G4250D;
-use lsm303agr::{Lsm303agr, interface::I2cInterface as MagI2cInterface, mode::MagOneShot};
 
 use static_cell::StaticCell;
 
@@ -46,14 +47,13 @@ bind_interrupts!(struct Irqs2 {
     I2C2_ER => i2c::ErrorInterruptHandler<peripherals::I2C2>;
 });
 
-type Magnetometer = Lsm303agr<MagI2cInterface<I2c<'static, Async>>, MagOneShot>;
-pub type MagnetoMutex = mutex::Mutex<CriticalSectionRawMutex, Magnetometer>;
+type SharedI2CBusMutex = Mutex<NoopRawMutex, I2c<'static, Async>>;
 
 type Gyro = I3G4250D<Spi<'static, Blocking>, Output<'static>>;
-pub type GyroMutex = mutex::Mutex<CriticalSectionRawMutex, Gyro>;
+pub type GyroMutex = Mutex<CriticalSectionRawMutex, Gyro>;
 
 type Rtc = Ds323x<RtcI2cInterface<I2c<'static, Async>>, DS3231>;
-pub type RtcMutex = mutex::Mutex<CriticalSectionRawMutex, Rtc>;
+pub type RtcMutex = Mutex<CriticalSectionRawMutex, Rtc>;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -61,7 +61,9 @@ async fn main(spawner: Spawner) {
 
     let peris = embassy_stm32::init(Default::default());
 
-    // Magnetometer - accelerometer setup
+    // Shared I2C Bus
+    // To be shared between LSM303AGR magnetometer-accelerometer and
+    // DS3231 Realtime Clock
     let i2c = I2c::new(
         peris.I2C1,
         // These pins are hardwired to the onboard magnetometer LSM303AGR on the stm32f3 discovery
@@ -75,21 +77,21 @@ async fn main(spawner: Spawner) {
         Hertz(100_000),
         Default::default(),
     );
-    static LSM303AGR_CELL: StaticCell<MagnetoMutex> = StaticCell::new();
-    let lsm303agr = Lsm303agr::new_with_i2c(i2c);
-    let lsm303agr = LSM303AGR_CELL.init(mutex::Mutex::new(lsm303agr));
+
+    static I2C_CELL: StaticCell<SharedI2CBusMutex> = StaticCell::new();
+    let shared_i2c_bus = I2C_CELL.init(Mutex::new(i2c));
 
     // Spawning magnetometer tasks
     spawner
-        .spawn(read_mag_temperature_every_n_seconds(lsm303agr, 3))
+        .spawn(read_mag_temperature_every_n_seconds(shared_i2c_bus, 3))
         .unwrap();
 
     spawner
-        .spawn(read_magnetometer_every_n_milliseconds(lsm303agr, 2048))
+        .spawn(read_magnetometer_every_n_milliseconds(shared_i2c_bus, 2048))
         .unwrap();
 
     spawner
-        .spawn(read_accelerometer_every_n_milliseconds(lsm303agr, 777))
+        .spawn(read_accelerometer_every_n_milliseconds(shared_i2c_bus, 777))
         .unwrap();
 
     // Let's first try RTC clock with a separate I2C bus and
@@ -145,7 +147,7 @@ async fn main(spawner: Spawner) {
     }
 
     static RTC_CELL: StaticCell<RtcMutex> = StaticCell::new();
-    let rtc = RTC_CELL.init(mutex::Mutex::new(rtc));
+    let rtc = RTC_CELL.init(Mutex::new(rtc));
 
     let rtc_int_pin = ExtiInput::new(peris.PA0, peris.EXTI0, Pull::Down);
 
@@ -164,7 +166,7 @@ async fn main(spawner: Spawner) {
     // Spawning gyro tasks
     if let Some(i3g4250d) = i3g4250d {
         static I3G4250D_CELL: StaticCell<GyroMutex> = StaticCell::new();
-        let i3g4250d = I3G4250D_CELL.init(mutex::Mutex::new(i3g4250d));
+        let i3g4250d = I3G4250D_CELL.init(Mutex::new(i3g4250d));
 
         spawner
             .spawn(read_gyro_temperature_every_n_seconds(i3g4250d, 5))

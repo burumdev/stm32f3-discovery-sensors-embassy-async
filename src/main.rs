@@ -16,10 +16,6 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex, blocking_mutex::raw::NoopRawMutex, mutex::Mutex,
 };
 
-use ds323x::{
-    DateTimeAccess, Ds323x, NaiveDate, SqWFreq, ic::DS3231,
-    interface::I2cInterface as RtcI2cInterface,
-};
 use i3g4250d::I3G4250D;
 
 use static_cell::StaticCell;
@@ -51,9 +47,6 @@ type SharedI2CBusMutex = Mutex<NoopRawMutex, I2c<'static, Async>>;
 
 type Gyro = I3G4250D<Spi<'static, Blocking>, Output<'static>>;
 pub type GyroMutex = Mutex<CriticalSectionRawMutex, Gyro>;
-
-type Rtc = Ds323x<RtcI2cInterface<I2c<'static, Async>>, DS3231>;
-pub type RtcMutex = Mutex<CriticalSectionRawMutex, Rtc>;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -94,65 +87,13 @@ async fn main(spawner: Spawner) {
         .spawn(read_accelerometer_every_n_milliseconds(shared_i2c_bus, 777))
         .unwrap();
 
-    // Let's first try RTC clock with a separate I2C bus and
-    // see if it's working before switch to bus sharing
-    let i2c_rtc = I2c::new(
-        peris.I2C2,
-        // SCL, SDA
-        peris.PA9,
-        peris.PA10,
-        Irqs2,
-        peris.DMA1_CH4,
-        peris.DMA1_CH5,
-        Hertz(100_000),
-        Default::default(),
-    );
-
-    let mut rtc = Ds323x::new_ds3231(i2c_rtc);
-    let datetime_start = NaiveDate::from_ymd_opt(2025, 8, 10)
-        .unwrap()
-        .and_hms_opt(1, 0, 0)
-        .unwrap();
-
-    // Using middle-income man's interrupt method by
-    // using 1hz square wave output as interrupt.
-    // Because ds3231 interrupt output is open drain and
-    // I don't know how to make it work with stm32f3-discovery inputs.
-    // Perhaps it needs an external power source with pull-up resistor.
-    match rtc.use_int_sqw_output_as_square_wave() {
-        Ok(()) => {
-            info!("RTC: Using SQW pin with square wave as interrupt.");
-        }
-        Err(_) => {
-            error!("RTC ERROR: Can't use SQW pin for interrupts!");
-        }
-    }
-
-    match rtc.set_square_wave_frequency(SqWFreq::_1Hz) {
-        Ok(()) => {
-            info!("RTC: 1Hz frequency set for square wave output.");
-        }
-        Err(_) => {
-            error!("RTC ERROR: Couldn't set 1Hz freq for SQW output!");
-        }
-    }
-
-    match rtc.set_datetime(&datetime_start) {
-        Ok(()) => {
-            info!("RTC: Datetime set successfully.");
-        }
-        Err(_) => {
-            error!("RTC ERROR: Could not set datetime!");
-        }
-    }
-
-    static RTC_CELL: StaticCell<RtcMutex> = StaticCell::new();
-    let rtc = RTC_CELL.init(Mutex::new(rtc));
-
+    // RTC Setup
     let rtc_int_pin = ExtiInput::new(peris.PA0, peris.EXTI0, Pull::Down);
 
     // Spawn RTC task
-    spawner.spawn(rtc_event(rtc, rtc_int_pin)).unwrap();
+    spawner
+        .spawn(rtc_event(shared_i2c_bus, rtc_int_pin))
+        .unwrap();
 
     // Gyroscope setup
     let mut spi_config = SpiConfig::default();

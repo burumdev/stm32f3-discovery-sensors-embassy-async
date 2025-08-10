@@ -8,9 +8,10 @@ use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 
+use crate::SharedI2CBusMutex;
+
 type Magnetometer =
     Lsm303agr<I2cInterface<I2cDevice<'static, NoopRawMutex, I2c<'static, Async>>>, MagOneShot>;
-use crate::SharedI2CBusMutex;
 
 fn get_lsm303agr_error_text<E>(err: &Lsm303agrError<E>) -> &'static str {
     match err {

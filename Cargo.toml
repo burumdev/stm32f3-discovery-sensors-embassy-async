@@ -6,7 +6,7 @@ authors = ["Barış Ürüm"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-# Low level MCU libraries for linking against. Not used directly.
+# Low level CPU libraries for linking against. Not used directly.
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.5"
 
@@ -19,15 +19,23 @@ panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 # Drivers
 lsm303agr = { version = "1.1.0", features = ["async"] }
 i3g4250d = "0.3.0"
+ds3231 = { version = "0.3.0", features = ["async"] }
+
+# For async driver bus sharing
+embedded-hal-async = "1.0.0"
 
 # Embassy
+embassy-stm32 = { version = "0.2.0", features = ["stm32f303vc", "memory-x", "time-driver-tim2", "exti"] }
 embassy-executor = { version = "0.7.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
-embassy-stm32 = { version = "0.2.0", features = ["stm32f303vc", "memory-x", "time-driver-tim2"] }
 embassy-sync = "0.7.0"
 embassy-time = { version = "0.4.0", features = ["defmt-timestamp-uptime"] }
+embassy-embedded-hal = { version = "0.4.0", features = ["defmt"] }
 
 # For lazy compile time initialization of globals
 static_cell = "2.1.1"
+
+# chrono
+chrono = { version = "0.4.41", default-features = false }
 
 # cargo build/run
 [profile.dev]
@@ -38,27 +46,8 @@ incremental = false
 opt-level = 'z'         # <-
 overflow-checks = true  # <-
 
-# cargo test
-[profile.test]
-codegen-units = 1
-debug = 2
-debug-assertions = true # <-
-incremental = false
-opt-level = 3           # <-
-overflow-checks = true  # <-
-
 # cargo build/run --release
 [profile.release]
-codegen-units = 1
-debug = 2
-debug-assertions = false # <-
-incremental = false
-lto = 'fat'
-opt-level = 3            # <-
-overflow-checks = false  # <-
-
-# cargo test --release
-[profile.bench]
 codegen-units = 1
 debug = 2
 debug-assertions = false # <-

@@ -3,10 +3,9 @@ use embassy_time::Timer;
 use lsm303agr::Error as Lsm303agrError;
 use lsm303agr::{Lsm303agr, interface::I2cInterface, mode::MagOneShot};
 
+use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_stm32::{i2c::I2c, mode::Async};
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-
-use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 
 use crate::SharedI2CBusMutex;
 

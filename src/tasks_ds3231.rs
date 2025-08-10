@@ -3,15 +3,13 @@ use defmt::*;
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_stm32::exti::ExtiInput;
 
-use chrono::{Datelike, Timelike};
+use chrono::{Datelike, NaiveDate, Timelike};
 
 use crate::SharedI2CBusMutex;
 use ds3231::{
     Config as RTCConfig, DS3231, InterruptControl, Oscillator, SquareWaveFrequency,
     TimeRepresentation,
 };
-
-use chrono::NaiveDate;
 
 fn ones(num: u32) -> u32 {
     num % 10
@@ -30,7 +28,7 @@ pub async fn rtc_event(i2c_bus: &'static SharedI2CBusMutex, mut exti: ExtiInput<
 
     let datetime_start = NaiveDate::from_ymd_opt(2025, 8, 10)
         .unwrap()
-        .and_hms_opt(1, 0, 0)
+        .and_hms_opt(1, 32, 33)
         .unwrap();
 
     // Using middle-income man's interrupt method by
@@ -76,7 +74,7 @@ pub async fn rtc_event(i2c_bus: &'static SharedI2CBusMutex, mut exti: ExtiInput<
                 info!("*********************************");
                 info!("*** TIME PASSES! IT DOES! ***");
                 info!(
-                    "Time is not relative look: {}{}:{}{}:{}{} {}-{}{}-{}{}",
+                    "Time is not relative.. Look: {}{}:{}{}:{}{} {}-{}{}-{}{}",
                     tens(dt.hour()),
                     ones(dt.hour()),
                     tens(dt.minute()),

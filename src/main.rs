@@ -60,13 +60,14 @@ async fn main(spawner: Spawner) {
     let i2c = I2c::new(
         peris.I2C1,
         // These pins are hardwired to the onboard magnetometer LSM303AGR on the stm32f3 discovery
+        // They should also be connected to DS3231 as SCL and SDA
         peris.PB6,
         peris.PB7,
         Irqs,
         // DMA channels for I2c TX DMA (Sender) and RX DMA (Receiver)
         peris.DMA1_CH6,
         peris.DMA1_CH7,
-        // We use normal transmission speed
+        // We use normal transmission speed 100khz
         Hertz(100_000),
         Default::default(),
     );
@@ -102,10 +103,9 @@ async fn main(spawner: Spawner) {
     let spi = Spi::new_blocking(peris.SPI1, peris.PA5, peris.PA7, peris.PA6, spi_config);
 
     let cs_pin = Output::new(peris.PE3, Level::High, Speed::Low);
-    let i3g4250d = I3G4250D::new(spi, cs_pin).ok();
 
     // Spawning gyro tasks
-    if let Some(i3g4250d) = i3g4250d {
+    if let Some(i3g4250d) = I3G4250D::new(spi, cs_pin).ok() {
         static I3G4250D_CELL: StaticCell<GyroMutex> = StaticCell::new();
         let i3g4250d = I3G4250D_CELL.init(Mutex::new(i3g4250d));
 
@@ -117,7 +117,7 @@ async fn main(spawner: Spawner) {
             .unwrap();
     } else {
         warn!(
-            "Could not establish SPI connection to i3g4250 gyro. But hey we can go on without it donchuwory we don't do rocket science here.."
+            "Could not establish SPI connection to i3g4250 gyro. But hey we can go on without it donchuwory. We don't do rocket science here.."
         );
     }
 }

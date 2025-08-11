@@ -2,6 +2,10 @@
 Running LSM303AGR MEMS magnetometer-accelerometer, I3G4250D MEMS gyroscope (both from STMicroelectronics) and
 DS3231 Real Time Clock (Analog Devices) asynchronously with Embassy framework. Development board is STM32F3DISCOVERY.
 
+
+https://github.com/user-attachments/assets/d5785416-2ce2-4344-9fa2-ffbb7d27dd35
+
+
 ## Description
 Embassy is an async runtime and framework for various embedded systems.
 The aim of this demo is to run magneto and gyro devices found on the discovery development board and an external RTC clock device

@@ -34,6 +34,9 @@ Earlier versions might have an LSM303DLHC as magneto and L3GD20 as gyro also fro
 but they're completely different beasts and probably won't work with the drivers or comm settings used in this demo.
 DS3231 RTC from Analog Devices is added externally to the same I2C bus pins of the LSM303AGR for SCL and SDA.
 
+A sketch of the bus connections can be seen below. Note that some of the connections are already present on the board. VCC and other connections omitted.
+<img width="1164" height="848" alt="STM32F3Discovery-sensors-async" src="https://github.com/user-attachments/assets/058ae92b-e0ea-4eb7-a24d-02973e031eba" />
+
 ## Libraries used
 * [embassy-rs](https://github.com/embassy-rs/embassy) provides the async runtime tuned for embedded hardware ecosystem and behaviour. It's also a framework and in this
 demo it also provides the PAC (low level peripheral access), HAL (high level hardware abstractions that humans can relate to) and timer support.

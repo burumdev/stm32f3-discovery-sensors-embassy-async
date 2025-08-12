@@ -55,7 +55,7 @@ doing lazy one time initialization and returning a static mutable reference. Thu
 
 * Rust build system rustup and cargo.
 * Arm Cortex M4F cross compilation target libraries. Add them with:
-    * `rustup target add thumbv6m-none-eabihf`
+    * `rustup target add thumbv7em-none-eabihf`
 * probe-rs firmware flashing and debugging tool (can be installed via cargo binary)
 * Electrical connections from the stm32f3-discovery board are:
     * GND -> DS3231 GND

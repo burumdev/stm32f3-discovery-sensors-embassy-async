@@ -33,14 +33,10 @@ use tasks_i3g4250d::*;
 mod tasks_ds3231;
 use tasks_ds3231::*;
 
+// I2C Event and error IRQs
 bind_interrupts!(struct Irqs {
     I2C1_EV => i2c::EventInterruptHandler<peripherals::I2C1>;
     I2C1_ER => i2c::ErrorInterruptHandler<peripherals::I2C1>;
-});
-
-bind_interrupts!(struct Irqs2 {
-    I2C2_EV => i2c::EventInterruptHandler<peripherals::I2C2>;
-    I2C2_ER => i2c::ErrorInterruptHandler<peripherals::I2C2>;
 });
 
 type SharedI2CBusMutex = Mutex<NoopRawMutex, I2c<'static, Async>>;

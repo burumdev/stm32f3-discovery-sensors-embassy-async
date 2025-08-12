@@ -54,9 +54,11 @@ doing lazy one time initialization and returning a static mutable reference. Thu
 ## To build and run you need
 
 * Rust build system rustup and cargo.
+    * https://www.rust-lang.org/tools/install
 * Arm Cortex M4F cross compilation target libraries. Add them with:
     * `rustup target add thumbv7em-none-eabihf`
 * probe-rs firmware flashing and debugging tool (can be installed via cargo binary)
+    * `cargo install prope-rs`
 * Electrical connections from the stm32f3-discovery board are:
     * GND -> DS3231 GND
     * 3V3 -> DS3231 VCC
